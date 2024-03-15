@@ -29,7 +29,7 @@
 ### 二、关于前端开发之脚手架开发和组件
 
 ![1709888425850](E:\文档_Typora\1-关于怎么学会coding2.assets\1709888425850.png)
-![宏观操作](https://github.com/YangZhi1605/reCode_doc/blob/main/1-%E5%85%B3%E4%BA%8E%E6%80%8E%E4%B9%88%E5%AD%A6%E4%BC%9Acoding2.assets/1709888425850.png?raw=true)
+![宏观操作-github上图片](https://github.com/YangZhi1605/reCode_doc/blob/main/1-%E5%85%B3%E4%BA%8E%E6%80%8E%E4%B9%88%E5%AD%A6%E4%BC%9Acoding2.assets/1709888425850.png?raw=true)
 
 
 

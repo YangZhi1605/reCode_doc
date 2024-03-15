@@ -1015,7 +1015,458 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 
+>**小总结完成，即Springboot的DAO完成，继续后面的开发**
 
+## 四、开发业务
+
+业务对于java而言，主要是一个接口(例如：`UserService`)配合一个实现类(例如：`UserServiceImpl`)
+
+比如此时有：
+
+接口：
+
+```java
+import com.baizhi.entity.User;
+import java.util.List;
+public interface userservice{
+    //查询所有用户
+List<User>findall();
+}
+
+```
+
+
+
+其对应的实现类：
+
+```java
+import java.util.List;
+@Service
+@Transactional//控制事务
+public class UserServiceImpl implements UserService{
+    @Autowired
+    private UserDAO userDAO;
+    @override
+    @Transactional(propagation Propagation.SUPPORTS)
+    public List<User>findAll(){
+    return userDAO.findAll();
+    }
+}
+
+```
+
+
+
+```markdown
+1、将 Spring Boot 的 Controller 层迁移到 Flask 的路由和视图函数。在 Flask 中，我们使用装饰器来定义路由，并将路由映射到视图函数。  
+2、将 Spring Boot 的 Service 层迁移到 Flask 的业务逻辑层。在 Flask 中，我们通常会创建一个或多个 Python 模块来封装业务逻辑。  
+3、将 Spring Boot 的 Repository 层迁移到 Flask 的模型层。在 Flask 中，我们使用 SQLAlchemy 或其他 ORM 工具来定义数据模型和数据库操作。  
+4、将 Spring Boot 的 DTO 迁移到 Flask 的表单验证和序列化。在 Flask 中，我们可以使用 WTForms 来处理表单验证，使用 Marshmallow 或 similar 库来处理序列化。  
+5、将 Spring Boot 的全局异常处理迁移到 Flask 的错误处理。在 Flask 中，我们可以使用 @app.errorhandler 装饰器来定义全局错误处理函数。  
+6、将 Spring Boot 的 AOP 迁移到 Flask 的 before_request 和 after_request 钩子函数。在 Flask 中，我们可以使用这些钩子函数来实现类似于 AOP 的功能。  
+7、将 Spring Boot 的配置文件迁移到 Flask 的配置对象。在 Flask 中，我们通常会创建一个 Python 模块来存储配置信息，然后使用 app.config.from_object 方法来加载配置。  
+8、将 Spring Boot 的测试迁移到 Flask 的测试。在 Flask 中，我们可以使用 unittest 或 pytest 来编写测试。 
+```
+
+
+
+大多数Python开发者在处理这种情况时，可能会选择使用Python的动态特性和鸭子类型，而不是创建接口和实现类。
+
+他们可能会直接创建一个类，并在其中实现所需的方法。例如，对于你提供的Java代码，Python版本可能如下
+
+```python
+from typing import List
+from your_project.models import User
+
+class UserService:
+    def __init__(self, user_dao):
+        self.user_dao = user_dao
+
+    def find_all(self) -> List[User]:
+        return self.user_dao.find_all()
+```
+
+在这个例子中，UserService 类有一个 find_all 方法，该方法调用了 user_dao 的 find_all 方法。**user_dao 可以是任何具有 find_all 方法的对象**，这就是所谓的鸭子类型：如果它走起路来像鸭子，叫起来也像鸭子，那么它就是鸭子。  
+
+这种方式的优点是简单、灵活，你可以轻松地替换 user_dao，只要新的 user_dao 有 find_all 方法即可。
+
+这在写测试时特别有用，你可以用模拟对象或存根替换 user_dao。  这种方式的缺点是，如果 user_dao 没有 find_all 方法，你只有在运行时才会发现错误。
+
+而在Java中，如果你试图实现一个接口，但没有提供接口中所有的方法，编译器会在编译时给出错误。
+
+
+
+而至于这个类：
+
+大多数Python开发者可能会将这种服务类放在一个名为 services 或 business_logic 的目录下。
+
+这个目录通常位于项目的根目录下，**与 models、views 或 controllers 等其他目录平级**。
+
+这样做的目的是为了保持代码的组织结构清晰，使得其他开发者能够更容易地理解和维护代码
+
+
+
+综合出我的版本是：
+
+```python
+from typing import List
+# 导入模型
+from BootVueDemo.utils.models import User
+# from your_project.models import User
+
+class UserService:
+    def __init__(self, user_dao):
+        self.user_dao = user_dao
+    
+    # 配合SQLAlchemy的User模型，实现查询所有用户的功能
+    def find_all(self) -> List[User]:
+        return self.user_dao.find_all()
+```
+
+
+
+
+
+## 五、控制器开发
+
+java里面要写控制器了，也就是我这儿的视图函数。
+
+> **基于前后端分离的系统，其通讯方式主要是`JSON方式`**
+
+
+
+```java
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+@RestController
+eRequestMapping("user")
+    public class UserController{
+        @Autowired
+        private UserService userService;
+        //查询所有方法
+        @GetMapping("findAll")
+        public List<User>findAll(){
+            List<User>users userservice.findAll();
+            return users;
+        }
+    }
+
+```
+
+
+
+
+
+对于我来说：
+
+**我需要导入上面写好的Blueprint 类和 UserService 类。**
+
+然后，可以创建一个 Blueprint 对象，并定义一个路由和视图函数，专门来负责网页的控制。
+
+在视图函数中，你可以创建一个 UserService 对象，并调用其 find_all 方法来获取所有的 User 对象。
+
+==最后，你将这些 User 对象转换为 JSON 格式，并返回==
+
+这里需要注意，因为获得的是User对象：
+
+```python
+print(users)
+print([user.to_dict() for user in users])
+
+
+```
+
+
+
+直接输出User模型查询数据库后的输出结果：
+
+> [<User 1>, <User 2>, <User 3>]
+
+通过自己写的`to_dict（）`方法去转为字典，现在正常了。
+
+> [
+>
+> {'id': '1', 'name': '旺旺旺', 'age': 18, 'salary': 5000.3, 'phoneCode': '13408421910'},
+>
+>  {'id': '2', 'name': '杨枝', 'age': 20, 'salary': 9000.78, 'phoneCode': '13456781290'}, 
+>
+> {'id': '3', 'name': '小黑', 'age': 34, 'salary': 3900.89, 'phoneCode': '19978562354'}
+>
+> ]
+
+
+
+**最后去写视图函数，即控制层**
+
+
+
+
+
+>**Tips:关于JSON和python字典的再区分**
+
+Flask 的 jsonify 函数可以将 Python 字典转换为 JSON 格式的数据。
+
+这个函数不仅可以处理字典，还可以处理其他可以被转换为 JSON 格式的 Python 数据类型，如列表、元组等。例如：
+
+```python
+from flask import jsonify
+
+data = {
+    "name": "John",
+    "age": 30,
+    "city": "New York"
+}
+
+json_data = jsonify(data)
+```
+
+
+
+```markdown
+	Python的字典和JSON格式的数据确实都是键值对的格式，但它们有一些重要的区别：  
+
+数据类型：Python字典是Python的内置数据类型，而JSON是一种数据交换格式，它是一种纯文本格式，独立于任何语言。  
+
+语法：Python字典的键和值可以是Python的任何数据类型，而JSON的键必须是字符串，值可以是字符串、数字、数组（类似于Python的列表）、另一个JSON对象、布尔值或null。  
+
+使用场景：Python字典主要用于在Python程序内部存储和操作数据，而JSON主要用于在网络上传输数据，或者在不同的编程语言之间交换数据。  
+
+可读性：Python字典在打印时会保留其结构，而JSON数据通常会被打印为单行字符串。  
+
+转换：Python提供了json模块，可以使用json.dumps()函数将字典转换为JSON字符串，使用json.loads()函数将JSON字符串转换为字典。
+```
+
+
+
+关于本次的代码：
+
+```python
+	print(users)
+    print([user.to_dict() for user in users])
+    # return jsonify(users)
+    print(jsonify([user.to_dict() for user in users]))
+    return jsonify([user.to_dict() for user in users])
+
+```
+
+
+
+>`[user.to_dict() for user in users]`：这是一个列表推导式，它遍历 users 列表中的每个 User 对象，并调用每个对象的 to_dict 方法。这将每个 User 对象转换为一个字典，然后将这些字典放入一个新的列表中。  
+>`jsonify([user.to_dict() for user in users])`：然后，jsonify 函数将这个列表转换为 JSON 格式的数据。  
+>所以，这行代码的作用是将 users 列表中的每个 User 对象转换为字典，然后将这些字典放入一个列表中，最后将这个列表转换为 JSON 格式的数据。
+
+
+
+当然，我直接输出`print(jsonify([user.to_dict() for user in users]))`得到的是一个响应`<Response 371 bytes [200 OK]>`
+
+
+
+jsonify 函数的返回值是一个 Response 对象，而不是 JSON 格式的字符串。
+
+这是因为 jsonify 不仅将数据转换为 JSON 格式，还创建了一个 Response 对象，该对象包含了 HTTP 响应的所有信息，如状态码、头部信息等。  
+
+当你打印 Response 对象时，你看到的是其字符串表示形式，而不是其包含的 JSON 数据。
+
+如果你想查看 Response 对象的 JSON 数据，你可以使用 get_json 方法：
+
+```python
+print(users)
+print([user.to_dict() for user in users])
+response = jsonify([user.to_dict() for user in users])
+print(response.get_json())
+return jsonify([user.to_dict() for user in users])
+```
+
+从输出结果来看，确实没有区别：
+
+==[<User 1>, <User 2>, <User 3>]==
+==[{'id': '1', 'name': '旺旺旺', 'age': 18, 'salary': 5000.3, 'phoneCode': '13408421910'}, {'id': '2', 'name': '杨枝', 'age': 20, 'salary': 9000.78, 'phoneCode': '13456781290'}, {'id': '3', 'name': '小黑', 'age': 34, 'salary': 3900.89, 'phoneCode': '19978562354'}]==
+==[{'age': 18, 'id': '1', 'name': '旺旺旺', 'phoneCode': '13408421910', 'salary': 5000.3}, {'age': 20, 'id': '2', 'name': '杨枝', 'phoneCode': '13456781290', 'salary': 9000.78}, {'age': 34, 'id': '3', 'name': '小黑', 'phoneCode': '19978562354', 'salary': 3900.89}]==
+json长相和字典确实像，只是确实不是一个东西。
+
+
+
+
+
+## 六、前后端交互测试
+
+加入跨域之后，通过`axios`发送请求。可以得到一个结果：
+
+```
+Array(3) [ {…}, {…}, {…} ]
+
+0: Object { age: 18, id: "1", name: "旺旺旺", … }
+
+1: Object { age: 20, id: "2", name: "杨枝", … }
+
+2: Object { age: 34, id: "3", name: "小黑", … }
+```
+
+可以看到，得到的是一个数组。
+
+>**到目前为止，第一版流程就这种执行完毕，先在实现其他功能。**
+
+
+
+
+
+## 七、添加信息的功能
+
+一样先把前台的信息交给`Vue`来管理。
+
+数据？交给`v-model`实现双向绑定。怎么绑定？通过一个对象来绑定。
+
+事件？交给`Vue`的方法和`axios`实现。
+
+这里从前台写到后台，因为我们是前台数据要存储到后台嘛，先确定我们把信息绑定好了。
+
+
+
+>**关于信息绑定**
+
+是的，可以使用一个对象来承接这个数据。这个慢慢过渡出来。
+
+其次，被默认事件教训了。主要就是这个刷新的动作，很奇怪，自己的控制台输出也不能输出信息。然后copilot指导说是`未阻止默认行为`
+
+```markdown
+ 	另外，你的"提交"按钮的类型是submit，这意味着当你点击这个按钮时，表单会尝试提交。如果你没有阻止这个默认行为，页面会刷新，这可能会导致你的console.log(this.user);在页面刷新之前无法执行。
+你可以尝试修改你的"提交"按钮的点击事件，添加.prevent修饰符来阻止表单的默认提交行为。这样，当你点击"提交"按钮时，页面就不会刷新，console.log(this.user);就可以正常执行了。
+当然，我暴力一点，按钮就是按钮，类型直接改成button
+```
+
+
+
+```html
+<div class="form-group">
+    <div class="col-sm-offset-2 col-sm-10">
+        <button type="button" class="btn btn-danger" v-on:click="saveUserInfo">提交</button>
+        <button type="button" class="btn btn-default">重置</button>
+    </div>
+</div>
+```
+
+**此时控制台就能正常打印东西出来了**
+
+![1710432979339](E:\文档_Typora\1-关于怎么学会coding3.assets\1710432979339.png)
+
+
+
+**去使用axios向后端接口发送POST请求**
+
+**现在去完成后端接口**
+
+从我的DAO模型——>业务服务层——>视图函数控制层
+
+dao模型和业务服务层都蛮好写的，重心在这个控制层的逻辑梳理：
+
+```java
+//保存用户方法
+@PostMapping("save")
+public Map<string,Object>save(@RequestBody User user){
+    Map<String,object>map new HashMap<>();
+    try{
+        userservice.save(user);
+        map.put("success",true);
+    }catch (Exception e){
+        map.put("success",false);
+        map.put("message","用户保存失败！")：
+    }
+    return map;
+}
+
+```
+
+可以看到，在java中，是将对接口进行请求的request处理为一个RequestBody了，然后其类型是User的。
+
+在 Flask 中，可以使用 `request 对象`来获取请求体中的 JSON 数据，然后使用这些数据来创建一个新的 User 对象，后续传递给服务层和DAO层。你可以使用 try/except 语句来处理可能出现的异常，并在异常发生时返回一个包含错误信息的响应。
+
+
+
+```python
+from flask import request, jsonify
+
+@user_controller.route('/save', methods=['POST'])
+def save():
+    response = {}
+    try:
+        # 获取请求体中的 JSON 数据
+        data = request.get_json()
+        # 使用这些数据来创建一个新的 User 对象
+        user = User(id=data['id'], name=data['name'], age=data['age'], salary=data['salary'], phoneCode=data['phoneCode'])
+        # 调用 UserService 的 save 方法来保存用户
+        userService.save(user)
+        response['success'] = True
+    except Exception as e:
+        response['success'] = False
+        response['message'] = '用户保存失败！'
+    return jsonify(response)
+```
+
+
+
+
+
+## 八、删除信息功能
+
+先到Vue中去写对应事件函数，前端写好，然后去开发对应的后端接口。
+
+也是模型——>service——>视图
+
+
+
+## 九、修改信息功能
+
+一样的，先到前台把事假函数写好，然后直接请求后端接口，再去开发后端接口。
+
+后端接口开发完毕：能够查询到指定ID的数据
+
+![1710487985398](E:\文档_Typora\1-关于怎么学会coding3.assets\1710487985398.png)
+
+
+
+将查询到的信息添加到表单中。因为Vue双向绑定的机制，我们在表单中进行修改之后，那么，user对象的数据其实已经改了，现在需要更新这个id在数据表中的信息。
+
+
+
+现在去完成后端接口，在这个视频中，接口还是之前保存信息的接口，之前加了if判断，判断id是否为空。id为空，说明数据库中没有，那么就进行保存新用户信息。id不为空，则进行更新操作。
+
+我就写成两个不同的接口吧。
+
+
+
+
+
+## 十、对姓名或者电话号码进行模糊查询
+
+这里有一个动态SQL的学习，不知道python中有没有，但是本质都是模糊查询，只是将都输入，只是输入单个的情况进行动态的区分：
+
+![1710493557344](E:\文档_Typora\1-关于怎么学会coding3.assets\1710493557344.png)
+
+
+
+顺序一样的，先把前端的事件，需要的接口写好。然后再去后端写拿数据的接口，
+
+
+
+前端这里有个链接通过`&`拼接，新接触。
+
+```js
+axios.get('http://127.0.0.1:5200/admin/findByNameOrPhone?name='+this.searchName+'&phoneCode='+this.searchPhone).then(function (response) {
+                    console.log(response.data);
+                    //将查询到的用户信息赋值给userList对象,vue的数据绑定会自动更新页面
+                    _this.userList = response.data;
+                }).catch(function (error) {
+                    console.log(error);
+                });
+```
+
+上面的动态SQL可以留意一下，以及这里最后是完成了需求
+
+整个流程，从静态页面的设计到让静态页面活起来，再通过后端工程师开发的与数据库交互的接口来进行数据的交互。
+
+于python而言，就是model层到service层，再到视图函数层。
 
 
 
@@ -1028,6 +1479,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # Question
+
+
+
+
 
 
 
