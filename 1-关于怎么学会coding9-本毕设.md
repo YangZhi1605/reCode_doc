@@ -97,6 +97,12 @@ Vue.prototype.$axios = axios
 
 
 
+根据路由出口调整了前台的页面展示：
+
+![1714620834334](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1714620834334.png)
+
+
+
 
 
 ### 二、写每个页面在静态死数据下的页面
@@ -1180,6 +1186,8 @@ computed: {
 
 ==tips:顺带搞定了github不能存储前台代码的原因，因为是我之前拉取的其他项目中设置了不用`git add`。根据提示删除那个`VueAdmin`后搞定了。==
 
+**一、研究数据格式**
+
 目前的数据格式是这种的：
 
 ```
@@ -1248,11 +1256,9 @@ computed: {
 
 那么，我每条路都是可以得到得到一个计算结果。再根据【权限数据库】，计算这一行的加权平均数结果，比如是3.2%。那么就可以定标到健康，并生成一个该范围内的随机数，存储到相应数据库中。
 
-
+**二、搞出我自己的适配的数据格式**
 
 ==现在就是，计算每行数据的8条电路电压比率。然后再调用数据库中的权重，计算最后的电压比率。==
-
-
 
 ```
 # 假设 data 是从数据库取出的数据列表
@@ -1273,6 +1279,16 @@ for item in data:
         Vout = item[f'Voltage{i+1}']
         ratio = cal_voltage_ratio(Vin, Vout)
         voltage_ratios.append(ratio)
+     # 遍历电路权重数据表，将电路权重乘以电压比率
+        for item in data_weight:
+          # 如果数据表中的IsSet为1，表示该行数据有效，则进行加权计算
+            if item['IsSet'] == 1:
+                # 从Circuit1到Circuit8
+                for i in range(1, 9):
+                    # 拿voltage_ratios列表中的信息，计算加权后的电压比率
+                    voltage_ratios[i - 1] *= item[f'Circuit{i}']
+                    # 结果保留四位小数
+                    voltage_ratios[i - 1] = round(voltage_ratios[i - 1], 4)
     # 将单行的电压比率列表加入到结果列表
     all_voltage_ratios.append(voltage_ratios)
 
@@ -1280,9 +1296,182 @@ for item in data:
 print(all_voltage_ratios)
 ```
 
+加权平均数计算成功。生成对应范围的随机数成功。数据格式整理成功。返回前台展示成功。
+
+**数据重新注入完毕了。现在需要管理权限**
+
+| 名称 | 权重 |
+| ---- | ---- |
+| 1路  | 0.2  |
+| 2路  | 0.2  |
+| 3路  | 0.15 |
+| 4路  | 0.1  |
+| 5路  | 0.05 |
+| 6路  | 0.1  |
+| 7路  | 0.12 |
+| 8路  | 0.08 |
+
+**三、检验成果**
+
+![1713061442416](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713061442416.png)
+
+终于tm对了，加权平均数计算错了，nnd。这里最后就输出哪个阶段的评分最多即可。
+
+**`加权平均数：将各数值乘以相应的权数，然后加总求和得到总体值，再除以总单位数`**。 
 
 
 
+
+
+##### ② 写饼状图
+
+**一、研究当前的数据格式**
+
+```
+pieData:[
+        { value: 1048, name: 'Terminal-1' },
+        { value: 735, name: 'Terminal-2' },
+        { value: 580, name: 'Terminal-5' },
+        { value: 484, name: 'Terminal-6' },
+        { value: 900, name: 'Terminal-8' }
+      ],
+```
+
+似乎这里的数据格式简单。统计出条磨损最为严重的电路即可。
+
+回到我的本职工作：定义怎么计算磨损
+
+>电池接线柱磨损之后，其实是传送电流的能力下降了。
+>
+>那么。也就是传输电流出去的能力下降了。
+>
+>比如Voltage1，一般而言，它们两次电流输出的结果应该在某个范围内浮动。但是当某两次输出结果出现了异常浮动。那么这异常浮动就值得注意了，统计这个异常浮动的次数，就是饼状图的磨损信息了。
+>
+>我现在需要看看，我的数据在哪些范围内的比较的多。然后框定数值。
+
+**二、搞出我自己的数据格式**
+
+```
+def get_top_five_values(formatted_data):
+    # 根据'value'键值对列表进行排序，设置reverse=True表示降序排列
+    sorted_data = sorted(formatted_data, key=lambda x: x['value'], reverse=True)
+    # 获取排序后的前五个元素，即'value'最大的五个元素
+    top_five = sorted_data[:5]
+    return top_five
+
+# 假定formatted_data是前面函数的返回值
+# 使用新函数筛选出'value'最大的五个元素
+top_five_results = get_top_five_values(formatted_results)
+
+# 打印结果
+for item in top_five_results:
+    print('得到的top 5结果：', item)
+```
+
+**三、完成**
+
+![1713086877531](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713086877531.png)
+
+**完成。这里最后就输出哪个接线柱的磨损最大，提醒用户去检修。**
+
+##### tips:心得体会
+
+今天写的逐步处理后端数据库的数据信息到自己想要的结果：
+
+① 当出现高耦合的时候，注释写好，传入参数是什么，返回值什么。
+
+② 当嵌套调用的时候，函数返回的结果最后不要乱写，因为容易分不清这个数据到底是干嘛的。就按照返回值命名，同时，返回值取名字的时候，取清晰一点，写长一点都不影响，一定得读了之后就知道在干嘛。
+
+##### ③ 写堆叠图
+
+**一、先研究当前有的数据格式**
+
+它的数据简单：
+
+```
+ series: [
+ {
+      data: [140, 232, 101, 264, 90, 340, 250]
+ }
+ ]
+```
+
+> 它的数据格式简单，难在我想要通过这些数据展示什么信息出来？
+>
+> **电压均值（※）:** ==表示统计对象的一般水平，容易受到极端值的影响==
+>
+> **电压众数（※）：** ==在统计分布上具有明显集中趋势点的数值，代表数据的一般水平==
+>
+> **电压峰度：**==这里要和正态分布一起用，待定==`pass`
+>
+> **电压偏度：**==这里也是和正态分布一起用，待定==`pass`
+>
+> **电压方差或者变异系数** （※）：** ==是[标准差](https://www.bananaspace.org/wiki/%E6%A0%87%E5%87%86%E5%B7%AE)的平方. 方差越小, 就表明该随机变量越倾向于取值在其[期望](https://www.bananaspace.org/wiki/%E6%9C%9F%E6%9C%9B)附近; 方差越大, 就表明该随机变量越倾向于在大范围内波动==
+>
+> **电压中位数（※）：**==它可以提供中心趋势的另一种度量，不受异常值的影响==
+>
+> **异常值** （※）：==我自己选择一点幸运观众作为异常值或者极端情况==
+
+想起来一个点，几个数据都是需要==标准化==再用。不然就是自己在机器学习中犯错的毛病一致了。
+
+好的，五个需要展示的结果现在搞定了。现在就在一列数据中去研究。饼图研究的是输入数据的，那么我这里研究输出数据。
+
+**二、搞我的数据并研究标准化的问题**
+
+```
+from sklearn.preprocessing import MinMaxScaler
+
+def standardize_statistics_func(statistics):
+    # 创建Scaler对象
+    scaler = MinMaxScaler()
+    # 对于每个统计量进行标准化
+    for key in statistics:
+        # 转换为二维数组以符合scaler的输入要求
+        data = [[x] for x in statistics[key]]
+        # 使用Scaler进行标准化操作
+        scaled_data = scaler.fit_transform(data)
+        # 更新标准化后的数据，保留三位小数
+        statistics[key] = [round(x[0], 3) for x in scaled_data]
+    
+    # 返回更新后的统计数据
+    return statistics
+
+# 你已有的统计结果
+statistics = {
+    'mean': [393.66, 404.61, 400.91, 403.49, 401.07, 398.86, 402.2, 404.41],
+    'mode': [...], # ....
+    # 其他统计数据
+    ...
+}
+
+# 调用标准化函数
+standardized_statistics = standardize_statistics_func(statistics)
+print(standardized_statistics)
+```
+
+出现零值是`MinMaxScaler`的正常行为，因为该方法会将数据缩放到0~1的范围内。这意味着，在每个特征列中最小的值会被缩放到0，最大的值会被缩放到1。如果你的列中有多个相同的最小（或最大）值，这些值标准化后也会是0（或1）。
+
+如果你想避免零值，一种可能的做法是添加一个非常小的常数到所有的值中，但这可能会改变数据的分布，这不是一个标准的方法。
+
+**三、完成**
+
+![1713137789946](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713137789946.png)
+
+
+
+##### ④ 写动态柱状图
+
+**一、研究数据以及我想通过数据表达什么？**
+
+想表达什么？
+
+当初是决定了判定每条数据中的警报数量。
+
+![1713139732834](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713139732834.png)
+
+最后这两个图待定。
+
+先试试更新数据库，前三个信息能够更新不。假如可以，最后这两个最后写，放两批假数据去骗一下。
 
 
 
@@ -1298,6 +1487,519 @@ print(all_voltage_ratios)
 
 先把前台做了，后面再去做后端的业务接口。
 
+>这里的表单可以模仿后台中权限管理的做法。表单可以换风格，但是设计思想不能改变了。
+
+>**表单是小事。**
+>
+>**现在出现两个问题：**
+>
+>**①点击分析处理后，需要将log日志页面中除了是否检修的标记之外的内容存储；**
+>
+>**②检修建议是应该是机器学习版本以及数据可视化分析的结果。这里并没有写逻辑进行存储;**
+>
+>归纳起来是一个问题，我需要将判断结果写出来，且存储起来了。
+>
+>==> 每个可视化处理自己的，然后自己调库去存储。一次点击即是对一次判断结果的存储，依次调用，依次追加。
+
+**先处理五档健康状态图的结果分析，将其存储起来。——完成**
+
+
+
+
+
+##### 2.5.1、写日志表格信息的编辑
+
+完成，根据ID主键进行更新，同样将新数据作为参数传入。
+
+##### 2.5.2、收获更新——关于日期时间选择器
+
+- 这里是ELementUI中的组件。使用的时候记得把样例中data函数的内容带上，不能只写`<el-date-picker>`
+
+
+
+##### 2.5.3、收获更新——关于时间日期格式
+
+**从`dao`到`service`到`controller`层，然后JSON化给前端的时候，时间格式发生了什么变化了？**
+
+> **① **在mysql数据库中存储的时间，例如：`2024-04-01 12:18:10`是按照ISO 8601存储的。对吧。 ``
+
+
+
+```markdown
+MySQL数据库中datetime字段的默认格式并非ISO 8601标准，而是'YYYY-MM-DD HH:MM:SS'。
+即，日期和时间部分之间以空格（' '）而非字符T来分隔，并且没有时区信息。
+例如，一个MySQL datetime字段的样例值可能是2024-04-01 12:18:10。
+	ISO 8601标准包含了更多的元素，它规定日期和时间部分之间以字符T分隔，并且在字符串结束处添加了Z来表示协调世界时（UTC），或者添加一个时区偏移来表示非UTC时间。
+	例如，一个符合ISO 8601标准的日期时间样例可以是2024-04-01T12:18:10Z（表示协调世界时）或2024-04-01T12:18:10+08:00（表示东8区时间）。
+	在处理跨时区问题时，ISO 8601标准可以提供较好的解决方案。
+然而，由于MySQL datetime字段的默认格式，并不直接兼容ISO 8601标准，这就需要我们在处理日期时间字符串时，进行适当的格式转换。
+```
+
+>**②**对于flask项目而言，当读取数据库中的信息反馈给前端的时候。我们使用的json数据，因此需要使用jsonify函数。但是它无法转换datetime对象，因此我们需要自己定义将对象转换为字典的函数。如下例，其中对MaintenanceDate的转换，即是将它从对象同等转换到mysql数据库存储时间的'YYYY-MM-DD HH:MM:SS'格式，对吧 ？
+
+```python
+​```
+    def to_dict(self):
+        return {
+            'DeviceNodeID': self.DeviceNodeID,
+            'MaintenanceDate': self.MaintenanceDate.strftime('%Y-%m-%d %H:%M:%S'),
+            'MaintenanceUser': self.MaintenanceUser,
+            'MaintenanceRport': self.MaintenanceRport,
+            'MaintenanceTage': self.MaintenanceTage
+        }
+
+​```
+```
+
+
+
+```markdown
+是的，由于 jsonify 函数不能直接序列化 datetime 对象，因此我们需要自己将 datetime 对象转换为一个能够被 jsonify 序列化的格式。
+在你提供的 to_dict 方法中，使用了 strftime('%Y-%m-%d %H:%M:%S') 方法来将 MaintenanceDate 的 datetime 对象格式化为一个字符串，
+其格式为 'YYYY-MM-DD HH:MM:SS'。这种格式是一个标准的日期时间格式，由于是字符串形式的，它能被 jsonify 正常处理，并能被大多数前端应用所理解。
+```
+
+
+
+
+
+**那么。从ELementUI通过`<el-date-picker>`进行时间选择，反馈给后端的时候，时间又方式了什么变化了？**
+
+>**③**下来，我看到我的项目中，我使用了`<el-date-picker>`组件实现时间和日期的选择。我看到我后端拿到的数据内容有：`"MaintenanceDate":"2024-04-01T12:18:10.000Z"`。我没有对前台的时间进行任何格式化处理，那么，这个组件默认确定数据的格式是ISO 8601，对吧 ？
+
+```markdown
+是的，你说的对。
+<el-date-picker> 是 Element UI 提供的日期选择器组件。
+当你在这个组件上选择日期和时间后，组件会按照 ISO 8601 格式生成一个代表所选时刻的字符串。
+对于日期和时间来说，这个格式通常是 'YYYY-MM-DDTHH:mm:ss.sssZ'。其中，T 是日期和时间的分隔符，.sss 是毫秒部分，Z 表示这个时间是以协调世界时（UTC）表示的。
+所以你见到的 '2024-04-01T12:18:10.000Z' 是由 <el-date-picker> 组件生成的标准 ISO 8601 时间字符串，它代表 UTC 时间 2024 年 4 月 1 日 12 点 18 分 10 秒。
+当你的后端接收到这样的字符串时，你可能需要将这个字符串转换为 MySQL 可接受的日期时间格式，否则会出现前面讨论过的错误。
+```
+
+因此出现了我代码中的格式转换：
+
+```python
+# 编写获取前台id和数据进行更新的接口
+@api_data_op_maintaininfo.route('/api/update_info',methods=['POST'])
+def update_info():
+    # 获取前台传来的数据
+    data = request.get_data()
+    print('前台反馈的数据',data)
+    # 将前台传来的数据转换为字典
+    data_dict = json.loads(data)
+    # 获取id并将id转换为int类型
+    id = int(data_dict['id'])
+    # 获取新数据
+    new_data = data_dict['new_data']
+    # 假定new_data中的MaintenanceDate格式为 'yyyy-mm-ddTHH:MM:SS.sssZ'
+    # 需要转换为MySQL接受的格式 'yyyy-mm-dd HH:MM:SS'
+    # 首先移除毫秒和'Z'
+    formatted_date = new_data['MaintenanceDate'].split('.')[0]
+    # 接着去除'T'
+    formatted_date = formatted_date.replace('T', ' ')
+    # 将格式化后的时间字符串赋值回new_data
+    new_data['MaintenanceDate'] = formatted_date
+    # 调用服务层的更新方法
+    repair_log_service.update_info(id,new_data)
+    # 返回JSON数据
+    return jsonify({'msg':'success'})
+```
+
+
+
+```
+{
+"DeviceNodeID":1,
+"MaintenanceDate":"2024-04-01T12:18:10.000Z",
+"MaintenanceRport":这是apiRun中的测试",
+"MaintenanceTage":"未处理",
+"MaintenanceUser":"杨枝YYDS"
+}
+```
+
+
+
+
+
+##### 2.5.4、写日志表格信息的删除
+
+**完成**
+
+
+
+##### 2.4.5、写日志表格信息的查询
+
+**完成**
+
+![1713189800570](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713189800570.png)
+
+##### 2.4.6、写日志表格信息的添加
+
+**添加是在点击`健康分析`之后的调用函数，将信息注入数据库。**
+
+我再去向假数据平台注入部分数据。从现在开始，项目所有数据集中在`device_upload`。制造假数据和假展示放到`device_fk`中。
+
+>在用户点击`整理文件`的时候，用户数据已经存储到数据库中，故而可以进行数据分析了。
+>
+>那么，我在点击`健康状态分析`的时候。可以直接调用一个数据注入函数，这个函数向后端发送请求，将所有的评测信息拿到，存储到数据库中。
+
+![1713192298353](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713192298353.png)
+
+##### 2.4.7-表格添加的异步学习
+
+
+
+**这里遇到了异步调用的问题。post在get没有执行完的时候就执行了**
+
+
+
+md。终于存储上了。明天看看AI说的内容，这个异步请求到底是个什么鬼。
+
+我之前不加异步的时候，
+
+```
+存储给后端的日志信息： 
+Object { MaintenanceDate: Getter & Setter, MaintenanceRport: Getter & Setter, MaintenanceTage: Getter & Setter, MaintenanceUser: Getter & Setter, … }
+```
+
+这个数据是等待整个页面加载完成再出现的。现在异步请求之后，终于正常了。
+
+以及，自己别tmd傻逼，总把键值对的键写错。
+
+
+
+**对于我最初的代码：**
+
+```js
+
+    get_log_info(){
+        this.$axios.get('http://127.0.0.1:5000/api/create_logInfo')
+            .then(response => {
+
+            this.log_info_create = response.data;
+            console.log('日志信息：',this.log_info_create);
+        })
+            .catch(error => {
+            console.error('Error:', error);
+        });
+    },
+
+    //跳转到工作台2，准备实现可视化分析
+    analysisFile() {
+        //调用get_log_info函数，获得本次日志信息
+         this.get_log_info();
+        //await this.get_log_info();
+        //检查this.log_info_create确保其不是空对象
+        console.log('准备发送给后端的日志信息：', this.log_info_create);
+        if (Object.keys(this.log_info_create).length > 0) {
+            this.$axios.post('http://127.0.0.1:5000/api/add_info', this.log_info_create)
+                .then(response => {
+                this.$message.success('日志信息已发送！');
+                console.log('存储给后端的日志信息：', this.log_info_create);
+            })
+                .catch(error => {
+                console.log(error);
+            });
+        } else {
+            console.log('日志信息为空，无法发送！');
+        }
+
+        this.$router.push('/wrben/wrben2');
+    },
+```
+
+
+
+JavaScript的异步执行特性。当你在`analysisFile`方法中调用`this.get_log_info()`时，它发起了一个异步的GET请求。由于GET请求是异步的，`this.$axios.post`会立即执行，而不会等待GET请求完成。由于GET请求尚未完成，此时`this.log_info_create`可能仍然是一个空对象`{}`，因此POST请求发送了一个空对象到后端。 
+
+
+
+**故而得进行异步调整。调整到等待get_log_info先完成**
+
+如果`get_log_info`是异步的，你应该使用异步处理方式（例如，使用`async`和`await`关键字或者`.then`方法）来确保数据完全加载后再执行后续操作。 
+
+通过使用`async`声明`analysisFile`方法并在`this.get_log_info()`调用前使用`await`关键字，可以确保在`this.get_log_info()`的异步操作完成之前不会执行任何后续代码。 
+
+若`get_log_info`函数是异步的，但是并没有将它声明为Promise，因此在你的`analysisFile`函数中使用`await`并不能等待它完成。你需要使用`new Promise()`将`get_log_info`函数改写成Promise形式，这样在其他部分的代码中就能正确地使用`await` 
+
+也就有了最后的代码：
+
+```js
+    // get_log_info函数应该返回一个Promise
+    get_log_info(){
+      return new Promise((resolve, reject) => {
+        this.$axios.get('http://127.0.0.1:5000/api/create_logInfo')
+          .then(response => {
+            this.log_info_create = response.data;
+            console.log('日志信息：', this.log_info_create);
+            resolve();  // 当方得到你需要的数据后，调用resolve告诉函数它已经完成了
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            reject(error);  // 如果有错误，调用reject将错误传递出去
+          });
+      });
+    },
+        
+    async analysisFile() {
+        //等待get_log_info函数的异步操作完成
+        await this.get_log_info();
+
+        //检查this.log_info_create确保其不是空对象
+        console.log('准备发送给后端的日志信息：', this.log_info_create);
+
+        //只有当this.log_info_create不是空对象时，才执行POST请求
+        if (Object.keys(this.log_info_create).length > 0) {
+            this.$axios.post('http://127.0.0.1:5000/api/add_info', this.log_info_create)
+                .then(response => {
+                this.$message.success('日志信息已发送！');
+                console.log('存储给后端的日志信息：', this.log_info_create);
+            })
+                .catch(error => {
+                console.log(error);
+            });
+        } else {
+            console.log('日志信息为空，无法发送！');
+        }
+
+        this.$router.push('/wrben/wrben2');
+    }
+```
+
+
+
+#### 2.6、零件仓库
+
+模仿小米商场
+
+##### 2.6.1、Swiper的使用
+
+**它用到了一个Swiper的东西**
+
+**1、安装Swiper和Vue兼容库** 
+
+```
+ npm install swiper@5.3.6
+ npm install vue-awesome-swiper@4.1.0
+```
+
+**2、在你的Vue项目中全局或局部注册Swiper组件** 
+
+**全局注册**
+
+在你的主入口文件（通常是`main.js`或`main.ts`）中全局注册`swiper`组
+
+```js
+     import Vue from 'vue'
+     import VueAwesomeSwiper from 'vue-awesome-swiper'
+     
+     // 导入swiper的样式文件
+     import 'swiper/css/swiper.css'
+     
+     Vue.use(VueAwesomeSwiper)
+```
+
+
+
+**3、使用Swiper组件**
+
+确保你在模板中使用的是已经注册的Swiper组件名。如果你是全局注册，组件名称应该与`vue-awesome-swiper`提供的一致；如果是局部注册，请确保与你导入的组件名称一致。
+
+
+
+以及它导入了一点其他的东西需要安装。—— 不属于swiper
+
+```bash
+ npm install --save vue-axios vue-cookie vue-lazyload
+```
+
+换一下版本：
+
+```
+npm i vue-lazyload@1.3.3 -S
+```
+
+
+
+##### 2.6.2、把基本的页面样式调整好
+
+搞定了。
+
+
+
+##### 2.6.3、编辑点击图片进入零件信息的页面
+
+① 点击零件信息，会进行一次跳转，带着参数id跳转到指定的页面。
+
+完成了，之前路由管理确实太乱了。
+
+![1713448109230](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713448109230.png)
+
+这个零件详细信息页面，是点击图片之后，通过`router-link`带着这个参数，在当前这层中寻找这个路由
+
+```vue
+      <div class="ads-box">
+        <router-link v-for="(item, id) in adsList" :key="id" :to="{ name: 'ToTest', params: { id: item.id }}" @click.native="logRoute(item.id)">
+          <img v-lazy="item.img" alt />
+        </router-link>
+      </div>
+```
+
+然后路由管理就开始找了，倘若在同层中找到这个路由，就在这层的顶层的路由展示`<router-view/>`中展示。
+
+我这里确实找到了：
+
+![1713448293922](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713448293922.png)
+
+那么就在顶层中展示：
+
+![1713448308726](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713448308726.png)
+
+看看是否符合我的顶层代码？
+
+![1713448408017](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713448408017.png)
+
+暂时把跳转写好。然后我得去写后台管理了，一边训练模型一边写其他功能。
+
+
+
+**个人理解的路由管理就是，注册的路由中，以大括号作为一个对象信息，并列的对象信息在一个路由出口出来。至于那种有children的，就在它的父亲中写路由出口。**
+
+
+
+#### 2.7、前台登录注册
+
+先写最简单和简陋的登录注册，然后再试着调整优美。
+
+**登录是根据邮箱和密码登录**
+
+****
+
+**注册则是需要把数据库中的信息除了修改时间，全部处理完成**
+
+**完成，但是没有怎么美化**
+
+
+
+#### 2.8、前台零件仓库管理
+
+###### 2.8.1、获取所有零件信息
+
+这里选择将商品的图片按照路径存储。vue-cli2中，浏览器是到static目录下找内容
+
+展示零件商品信息完成
+
+##### 2.8.2、写点击零件商品之后，跳转到商品信息页面的具体内容展示
+
+
+
+完成
+
+##### 2.8.3、对购物车的数量修改+下单状态修改
+
+完成
+
+ 
+
+#### 2.9订单确认页面
+
+##### 2.9.1、获取购物车中确认的订单
+
+##### 2.9.2、获取收货地址列表
+
+##### 2.9.3、对收货地址进行增、删、改
+
+其中，为了实现编辑收货地址：
+
+要从开源库如`chinese_regions`获取全国省市数据，并将其赋值给`addressOptions`，您需要执行几个步骤。以下是使用Vue.js和Axios（假设您使用Axios来处理HTTP请求）进行操作的基本方法：
+
+1. **安装Axios（如果尚未安装）**
+
+   如果您的项目中还没有Axios，请先安装它。在终端或命令提示符中运行以下命令：
+
+
+
+```bash
+   npm install axios
+```
+
+ 
+
+1. **准备API或数据源**
+
+   因为`chinese_regions`是一个Python库，直接在Vue项目中使用它可能不太方便。您需要找到提供JSON格式省市数据的API接口或者下载好的JSON文件。这里，我们假设您已经有了可以直接访问的URL或本地的JSON文件作为数据源。
+
+2. **获取数据并赋值**
+
+   在您的Vue组件中，使用`created`钩子函数来获取数据，并更新`addressOptions`。
+
+   - **使用本地JSON文件（假设文件位于public目录）：**
+
+     将数据文件放在`public`目录下，例如`public/china_regions.json`，然后在`created`钩子中加载这个文件。
+
+ 
+
+javascript
+
+```
+   created() {
+     axios.get('china_regions.json')
+       .then(response => {
+         this.addressOptions = response.data;
+       })
+       .catch(error => console.error("加载省市数据出错:", error));
+   },
+```
+
+ 
+
+- **使用在线API：**
+
+  如果您有在线API的URL，情况类似，只是URL会是一个完整的HTTP路径。
+
+ 
+
+javascript
+
+```
+   created() {
+     axios.get('https://example.com/api/china_regions')
+       .then(response => {
+         this.addressOptions = response.data;
+       })
+       .catch(error => console.error("加载省市数据出错:", error));
+   },
+```
+
+ 
+
+1. **在<el-cascader>组件中使用addressOptions**
+
+   确保您的`<el-cascader>`绑定的`options`属性是`addressOptions`。这样，一旦`addressOptions`被赋值，下拉列表就会自动填充省市数据。
+
+ 
+
+请注意，获取数据的操作取决于您的数据源格式，您可能需要根据实际数据结构调整代码。同时，请确保您的跨域请求（如果使用在线API）没有遇到CORS政策限制
+
+
+
+
+
+**增加和修改完成**
+
+**生成订单信息完成**
+
+**清空已经购买的购物车完成**
+
+
+
+#### 2.10、前台的订单信息展示列表
+
+这里我只做一个事儿，展示购买的零件订单。
+
+
+
+好的。前台完工。
 
 
 
@@ -1306,7 +2008,20 @@ print(all_voltage_ratios)
 
 
 
-## 后台
+
+
+
+
+
+
+
+
+
+
+
+
+
+## **后台**
 
 我决定把后台也单独领出来。flask只是作为一个服务器，处理各种api的请求。
 
@@ -1417,6 +2132,240 @@ methods: {
 **`写删除`**
 
 删除比较好写，删除完成。
+
+
+
+### 二、机器学习管理
+
+我这个功能模块要干嘛？
+
+**可以根据训练数据，选择对应的模型，进行数据训练。**
+
+**对已有数据模型的管理：**
+
+**增删改查+是否运用到本系统**
+
+
+
+#### 2.1、管理已有的机器学习模型
+
+##### 2.1.1、查询所有模型信息
+
+完成
+
+##### 2.1.2、删除当前模型信息
+
+完成
+
+##### 2.1.3、编辑当前模型的信息
+
+显示弹出框没问题
+
+![1713528185962](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713528185962.png)
+
+
+
+**完成了**
+
+##### 2.1.4、搜索当前模型的信息
+
+不用了，直接使用过滤器
+
+![1713533227069](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713533227069.png)
+
+明天可以写模型训练了。
+
+
+
+这里的分页功能也写好了，我还是用ElementUI的分页功能吧，别人的分页功能，我不一定能够吃下来。
+
+
+
+### 三、写登录注册以及相应的用户管理
+
+####  3.1、路由守卫的理解。
+
+```js
+router.beforeEach((to, from, next) => {
+    if (to.matched.length != 0) {
+        if (to.meta.requireAuth) { // 判断该路由是否需要登录权限
+            if (Boolean(localStorage.getItem("userInfo"))) { // 通过vuex state获取当前的user是否存在
+                next();
+            } else {
+                next({
+                    path: '/login',
+                    query: { redirect: to.fullPath } // 将跳转的路由path作为参数，登录成功后跳转到该路由
+                })
+            }
+        } else {
+            if (Boolean(localStorage.getItem("userInfo"))) { // 判断是否登录
+                if (to.path != "/" && to.path != "/login") { //判断是否要跳到登录界面
+                    next();
+                } else {
+                    /**
+                     * 防刷新，如果登录，修改路由跳转到登录页面，修改路由为登录后的首页
+                     */
+                    next({
+                        path: '/goods/Goods'
+                    })
+                }
+            } else {
+                next();
+            }
+        }
+    } else {
+        next({
+            path: '/login',
+            query: { redirect: to.fullPath } // 将跳转的路由path作为参数，登录成功后跳转到该路由
+        })
+    }
+})
+
+```
+
+路由拦截器的代码中的 if-else 逻辑是用于控制页面的访问权限。下面我将详细解释代码中不同部分的功能和逻辑：
+
+1. `router.beforeEach` 是Vue路由的全局前置守卫。它在路由发生变化之前的时候被调用，此时你可以决定是否允许或取消导航。
+2. `if (to.matched.length != 0)` 检查即将跳转到的路由是否存在，`to.matched` 包含了所有匹配的路由记录。
+3. `if (to.meta.requireAuth)` 根据路由元信息决定是否需要进行登录验证。如果 `requireAuth` 为真，代表这个路由需要登录后才能访问。
+4. `if (Boolean(localStorage.getItem("userInfo")))` 通过查看 `localStorage` 中是否存储了用户信息来判断用户是否已经登录。
+5. `next({ path: '/login', query: { redirect: to.fullPath } })` 如果用户没有登录，则重定向到登录页面，并附上一个查询参数 `redirect` ，这样登录成功后可以跳回至原先尝试访问的页面。
+6. 如果 `to.meta.requireAuth` 为假，表示这个路由不需要登录即可访问。在这种情况下，还会再次检查用户是否已经登录。如果用户已登录，还会检查 `to.path` 是否指向根路径 `/` 或登录页 `/login`，如果是的话，将会重定向到一个默认的页面（在这个例子中是 `/goods/Goods`）。
+
+总结起来就是:
+
+- 如果用户未登录，试图访问需要登录的页面，会被重定向到登录页面。
+- 如果用户已登录，并尝试访问根路径或登录页，则被重定向到一个默认的页面（比如“商品管理”页面）。
+- 其他情况下（比如访问不需要登录的页面或者用户已经登录并访问其他页面），直接放行。
+
+如果 `to.matched.length` 为 0，表示目标路由不存在，此时会强制重定向到登录页面。这通常用于捕捉无效的路由或者用户输入错误的URL。
+
+此段代码确保了页面的访问权限得到控制，用户在没有登录的情况下只能访问不要求认证的页面，确保了应用的安全性。
+
+
+
+在路由管控下进来了：
+
+![1713755308076](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1713755308076.png)
+
+#### 3.2、表单验证
+
+不写表单验证了，可以登录注册就可以了。
+
+
+
+#### 3.3、后端反馈数据的梳理
+
+得反馈成功获取信息了，也就是账号密码正确与否。以及得返回一个token序列。
+
+好的。磕磕盼盼的写完了，但是没得很大的收获，因为我在抗拒理解。
+
+
+
+
+
+
+
+
+
+### 四、写系统用户的信息管理
+
+#### 4.1、获取所有用户信息
+
+完成
+
+#### 4.2、删除用户信息并且发送邮件
+
+当前的授权码：LQSGAYMZXFPPJKHW 
+
+这里的积累是：
+
+![1714523290034](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1714523290034.png)
+
+```python
+# 配置信息
+    # 初始化邮件发送对象
+    mail = Mail(app)
+    # 邮件配置
+    app.config['MAIL_SERVER'] = 'smtp.163.com'
+    app.config['MAIL_PORT'] = 465  # 端口号，根据是否使用SSL/TLS选择端口
+    app.config['MAIL_USE_TLS'] = False  # 网易邮箱中不使用TLS，根据邮箱服务提供商的要求设置
+    app.config['MAIL_USE_SSL'] = True  # 网易邮箱使用了SSL，根据邮箱服务提供商的要求设置
+    app.config['MAIL_USERNAME'] = 'yangzhi15791605@163.com'  # 将your_email@163.com替换为我的163邮箱地址
+    app.config['MAIL_PASSWORD'] = 'LQSGAYMZXFPPJKHW'  # 将your_email_authorization_code替换为我的163邮箱授权码
+    app.config['MAIL_DEFAULT_SENDER'] = 'yangzhi15791605@163.com'  # 发件人邮箱地址
+    mail.init_app(app)
+
+```
+
+发送结果：
+
+![1714523352575](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1714523352575.png)
+
+![1714523389151](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1714523389151.png)
+
+以及指定删除信息：
+
+要添加一个步骤让操作者输入删除的原因并将其一起发送给后端，你需要使用Vue的`$prompt`方法来弹出一个输入框，提示用户输入删除原因 。
+
+用了`this.$prompt()`来创建一个带有输入框的对话框，要求操作者输入删除原因，其中：
+
+ 
+
+- `inputPattern: /\S+/` 确保输入内容不为空。
+- `inputErrorMessage: '删除原因不能为空'` 定义了当输入不符合模式时显示的错误消息。
+
+ 
+
+如果用户在输入框中输入了删除原因并点击确认，那么`value`就会包含这个删除原因，随后我们可以将这个原因作为一个新的字段`reason`添加到POST请求的数据对象中，并发送到后端。
+
+![1714524089616](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1714524089616.png)
+
+
+
+#### 4.3、搜索信息的功能
+
+![1714525439999](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1714525439999.png)
+
+
+
+#### 4.4、添加用户信息的功能
+
+![1714527988258](E:\文档_Typora\1-关于怎么学会coding9-本毕设.assets\1714527988258.png)
+
+
+
+#### 4.5、不要编辑框，直接上重置密码
+
+完成。
+
+
+
+
+
+### 五、零件商品信息管理
+
+我写前台的时候发现，应该先把后台的零件商品信息写好，前台直接展示以及完成后续的加入购物车的操作即可。
+
+#### 5.1、展示所有商品信息
+
+完成+完成分页展示
+
+
+
+#### 5.2、写商品的添加和编辑
+
+添加完成，现在写编辑，完成
+
+#### 5.3、写商品删除
+
+完成
+
+
+
+### 六、订单管理
+
+
 
 
 
@@ -1872,35 +2821,7 @@ mounted() {
 
 > 这里放置一个动态柱状图。300作为一批，分析每一批中，被预警支路的高低，机器学习最后反馈的时候，那个支路被预警最多，让它去检修。放到第二版的中间去
 
-| 编号 | 测试功能           | 预期结果                                                     | 测试结果 |
-| ---- | ------------------ | ------------------------------------------------------------ | -------- |
-| 1    | 文章发布功能       | 用户登录系统后，可以编写文章进行发布，编辑完成后点击发布按钮进行文章发布，文章进入审核流程。 | 符合预期 |
-| 2    | 文章保存为草稿功能 | 未编辑完的文章可以暂时储存为草稿之后再进行编辑，如果文章被管理员下架或者审核不通过，也将存放至草稿箱。 | 符合预期 |
-| 3    | 文章修改和删除功能 | 已发布的文章的作者有权限对文章进行修改和删除。               | 符合预期 |
-| 4    | 文章点赞功能       | 用户浏览完文章后，可以通过点赞给作者一些鼓励，点赞信息记载文章的点赞总数。 | 符合预期 |
-| 5    | 文章管理功能       | 登录的用户若是管理员，则具有权限进入后台进行文章管理，包括审核文章、下架文章、设置文章的标签。 | 符合预期 |
-
-暂时放一下测试模块
-
-
-
-我现在有一个prompt。请帮助我完成我的需求： 
-
-
-
-我将提供给你我每个模块的详细设计，请你结合我的详细设计帮我生成每个功能点的测试表格，其中测试结果均填写符合预期。表头为编号、测试功能、预期结果、测试结果。 各模块功能介绍如下： 
-
-（1）    用户登录模块：。 
-
-（2）    文章保存为草稿：未编辑完的文章可以暂时储存为草稿之后再进行编辑，如图4.x所示。用户还可以对文章以及草稿进行修改与删除。草稿功能还用于存放被管理员下架或者审核不通过的文章。 
-
-（3）    文章修改与删除：已经发布的文章，作者有权限对文章进行修改和删除。作者点击自己的文章，系统会根据权限判断当前登录用户是否具有修改和删除权限，如果有才会显示编辑按钮。作者可以点击编辑，进入文章发布的页面。当前页面和发布文章是的页面是同一个页面，但是区别在于发布文章时输入框中的内容均为空白，而编辑文章时输入框中的内容为当前所编辑文章的内容，这一功能的实现得益于Vue的模块复用设计。在编辑完成后，同样能够将文章暂时保存为草稿。 
-
-（4）    点赞：当用户浏览完文章后，觉得文章有所帮助，可以通过点赞给作者一些鼓励。点赞功能的实现通常涉及到存储用户的点赞信息以及计算文章的点赞总数。使用Redis作为后端存储是一种常见的选择，因为Redis是一个高性能的内存数据库，适合处理类似计数和缓存的任务，对于读取频繁的操作可以提供高性能的缓存。将热门数据存储在Redis中，可以减轻数据库的负担，提高访问速度。Redis的原子性操作使得计数非常高效。在点赞场景中，使用Redis可以方便地实现对文章点赞总数的实时更新。引入Redis后还需要考虑Redis和数据库数据同步问题，在本系统中采用定时更新到数据库的方案解决。 
-
-（5）    文章管理功能：登录的用户若是管理员，则具有权限进入后台进行文章管理。用户可以在后台审核文章、下架文章、设置文章的标签。其中审批功能中，系统引入自动审核与人工审核相结合的方式，自动审核利用腾讯云文本审核功能，对文章进行初步审核。对于通过自动审核但仍存在疑似违规的文章，管理员将进行人工审核，确保文章内容的合规性和规范性。管理员在后台可以随时查看已发布的文章，对违规、不当或不符合平台规范的文章进行下架处理。这一功能保障了平台内容的质量，维护了用户的良好体验。管理员有权限对文章的标签进行设置和调整。标签与话题结合，有助于对文章进行更精准的分类。管理员可以创建、编辑和删除标签，同时关联标签至平台的话题，以引导平台的话题走向，确保平台内容更有层次和组织性。 ``` 
-
-
+ 
 
 
 
@@ -1928,7 +2849,47 @@ mounted() {
 
 
 
+## 机器学习
 
+### 一、sklearn的安装
+
+**使用pip包管理器**
+
+`pip install -U scikit-learn`
+
+
+
+
+
+### 二、脱离jupyter notebook写模型训练
+
+主要将处理业务写在service层即可，jupyter是可以单步执行得到结果嘛，我这里就一块一块代码的执行了。
+
+**目前将KNN的简单训练，训练后的模型保存，加载保存的模型进行预测的代码编写完毕。**
+
+更新：额需要将模型的精度也存储到数据库中，为后续的动态仪表板分析做准备。
+
+
+
+
+
+### 三、算法集成
+
+> 集成的大致思路我是有了。目前需要解决一个超参数的调整问题。是应该我后端直接写死超参数还是在可视化图层中显示具体的信息传递给后端api来指定了？
+
+**这个问题的本质应该是，看看我训练的模型是不是都是依赖依赖超参数的形式。**
+
+
+
+例如训练支持向量机：
+
+要将我的代码从训练随机森林模型迁移到训练支持向量机（SVM），您需要做的主要更改涉及到替换模型实例化部分，以及可能对预处理步骤和超参数搜索范围进行一些微调。支持向量机和随机森林在一些超参数方面是不同的，例如，SVM有`C`和`gamma`（对于RBF核的SVM）等特有的参数。 
+
+
+
+
+
+**把cv的折数降低到三折，机器不是 **
 
 
 
@@ -1937,6 +2898,816 @@ mounted() {
 
 
 # Question
+
+>请解释我这段代码在做什么？
+
+```vue
+<div class="details-box">
+  <router-link v-for="(item, id) in detailList" :key="id" :to="{ name: 'ToTest', params: { id: item.id }}" @click.native="logRoute(item.id)">
+    <img :src="item.img" alt />
+  </router-link>
+</div>
+```
+
+这段代码主要是用来列出你的`detailList`数据数组中的所有项目，并创建每一个项目的路由链接和显示每个项目的图片。
+
+详细来说：
+
+1. `<router-link>` 是 Vue Router 提供的组件，用于在应用的不同部分之间导航。通过 `to` 属性，我们定义了点击链接后要向哪个路由跳转。`to` 中的 `name` 属性是你在 Vue Router 中预先定义好的路由名称，这个示例中是 `ToTest`。`params` 允许你向这个路由传递一些参数，这个示例中，你传递了 `item.id`。当你点击链接后，应用会跳转到 `ToTest` 路由，并且你可以在那个路由中访问到这个 `id` 参数。
+2. `v-for="(item, id) in detailList"` 是 Vue 的列表/数组渲染指令。它遍历 `detailList` 数组，并给每一个元素生成一个新的 `<router-link>` 元素。在生成元素的过程中，你可以访问当前元素(`item`)和它的索引(`id`)。
+3. `:key="id"` 是 Vue 索引。这个特性帮助 Vue 追踪每个节点的身份，是一个非常重要的机制。在数组发生变化时，比如添加、删除元素，Vue 会基于 `key` 的变化重新排序元素，使得差异化渲染变得更加准确快速。
+4. `@click.native="logRoute(item.id)"` 添加了一个原生的点击事件监听器，当你点击链接时，`logRoute` 方法会被调用，`item.id` 会作为参数传递给它。
+5. `<img :src="item.img" alt />` 是一个图片元素。`:src="item.img"` 是一个数据绑定，它把图片的 `src` 属性和当前元素的 `img` 属性绑定在一起，这样图片的源就会是你的数据对象中 `img` 的值。
+
+ 
+
+总的来说，这段代码主要是在使用 Vue 和 Vue Router 的功能展示一个由链接和图片组成的列表。这个列表的数据来自 `detailList`，并且每个元素根据其 `id` 有一个到名为 `ToTest` 的路由的链接。这个列表很可能是一个产品列表，或者类似的东西。
+
+
+
+
+
+>关于vue-cli2读取数据库中存储的图片路径并存储的认识有多少了？
+
+在Vue CLI 2中，默认没有`public`文件夹这个概念，相对应的是`static`文件夹，用来存放静态资源。这意味着，对于使用Vue CLI 2构建的项目，应当将静态资源放置在`static`目录下，而非新建的`public`文件夹中。
+
+根据你的项目结构，你已经有一个`static`文件夹。你应该将图片放在`static`文件夹或其子文件夹（例如`static/images`）中，而不是`public`文件夹中。这样，图片的路径应该基于`static`目录。当你的应用构建时，这些在`static`文件夹下的资源会被复制到输出目录（默认是`dist`），并保持原有的文件结构。
+
+ 
+
+由于`static`文件夹的内容在构建时会被复制到根目录下，所以你的图片URL在后端返回时应该是这样的：
+
+```json
+{
+  "desc": "这是马达",
+  "editTime": "Fri, 03 May 2024 10:08:39 GMT",
+  "editUser": "杨枝",
+  "id": 2,
+  "img": "/static/images/马达_out.jpg",
+  "name": "马达",
+  "number": 345,
+  "price": 456.21,
+  "productCompany": "奔驰公司的子公司丫丫吖"
+}
+```
+
+ 
+
+注意，这里`img`的路径改成了`/static/images/马达_out.jpg`来反映图片实际存在于`static/images`目录下。
+
+ 
+
+此时，你在Vue组件中引用图片的代码不需要改变，仍然是：
+
+```html
+<div class="details-box">
+  <router-link v-for="(item, id) in detailList" :key="id" :to="{ name: 'ToTest', params: { id: item.id }}" @click.native="logRoute(item.id)">
+    <img :src="item.img" alt />
+  </router-link>
+</div>
+```
+
+
+
+>我需要这个列表中`序号`这栏根据当前有的数据量来升序排列，即，即使我对数据库中id为4的删除了，数据库中id为5的为展示为序号4 
+
+你可以在`el-table-column`设置`type`为`index`来自动生成序号，代码如下：
+
+```vue
+<el-table-column align="center" type="index" label="序号" width="50">
+</el-table-column>
+```
+
+这样即使在你删除行的时候，序号依旧会依据当前数据进行更新，不会一直跟着id走。由于是自动生成的，序号是根据数据行在数据数组中的索引生成的，在进行排序或者过滤操作后，序号仍然会按照当前数据顺序进行排列。
+
+
+
+>那么，我这个退出登录的logout函数应该如何编写了？这个localStorage和cookie的区别是什么了？ 
+
+对于退出登录这个操作，基于现有的需求，我们只需要从本地存储中清除用户信息就行了：
+
+
+
+```javascript
+methods: {
+  logout() {
+    // 清除localStorage中的用户信息
+    localStorage.removeItem('user');
+    // 提示用户已退出
+    this.$message.success('您已退出登录');
+    //跳转到登录页面
+    this.$router.push('/login');
+  },
+  ... // 其他methods
+}
+```
+
+这样当用户点击退出时，用户信息就会被清除，导航栏就会显示‘登录’二字了。
+
+对于你问到的localStorage和cookie的区别，这两者都是浏览器存储机制。这是他们的几点不同：
+
+1. 存储大小：一个域名在cookie中只能保存4KB左右的信息，而localStorage能保存5MB。
+2. 生命周期：cookie有有效期，达到有效期就会自动删除，而localStorage没有有效期，除非你自己去删除。
+3. 数据随请求发送：cookie在HTTP请求中会自动携带，而localStorage不会。
+4. API易用性：localStorage的API更易用，它有setItem，getItem，removeItem等方法，而操作cookie需要自己手动解析。
+
+虽然localStorage看起来更优秀，当我们选择使用哪种技术时，需要对技术有深入理解和清楚的应用场景。例如，由于localStorage不能跨域，所以在需要跨域的场景下只能用cookie，这也是cookie依然广泛使用的原因之一。
+
+
+
+
+
+>我想要获取前台传递的参数信息中加入一个邮箱信息，然后向这个邮箱发送一则为什么删除的信息提示，请问如何修改？ 
+
+为了在现有的后端接口中添加额外的邮箱参数，并在删除用户信息时发送一封通知邮件，你需要修改后端接口的代码以接收和处理额外的邮箱参数。同时，你需要实现发送邮件的逻辑。下面是修改后的接口示例：
+
+首先，你需要确保你的环境中安装了发送电子邮件所需的库，例如 `conda`，如果还没有，请先安装。
+
+
+
+```python
+from flask import Flask, request, jsonify
+from flask_mail import Mail, Message
+
+app = Flask(__name__)
+mail = Mail(app)
+
+# 邮件配置, 正式环境中请不要将配置信息硬编码在代码中。
+app.config['MAIL_SERVER'] = 'your_mail_server'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'your_email@example.com'
+app.config['MAIL_PASSWORD'] = 'your_password'
+app.config['MAIL_DEFAULT_SENDER'] = 'your_email@example.com'
+
+mail.init_app(app)
+
+@api_data_op_userinfo_manage.route('/api/delete_front_user_info', methods=['POST'])
+def delete_front_user_info():
+    # 获取前台传递的id和email
+    data = request.json
+    user_id = int(data.get('id'))
+    user_email = data.get('email')  # 获取传递过来的邮箱信息
+
+    # 删除前台用户信息
+    result = service_front_user_info.delete_info(user_id)
+
+    # 如果删除成功并且提供了邮箱，则发送邮件通知用户
+    if result['success'] and user_email:
+        subject = "账号删除通知"
+        body = f"您的账号已经被删除。\n删除原因: {result.get('reason', '无特定原因')}"
+        send_mail(subject, body, [user_email])
+
+    # 返回结果
+    return jsonify(result)
+
+def send_mail(subject, body, recipients):
+    try:
+        msg = Message(subject, recipients=recipients, body=body)
+        mail.send(msg)
+        print('邮件发送成功')
+    except Exception as e:
+        print('邮件发送失败', e)
+```
+
+ 
+
+在这个示例中，我们首先导入了必要的 Flask-Mail 类，实例化一个 `Mail` 对象，并通过一系列配置初始化了它。在 `delete_front_user_info` 函数中，我们新增了读取 `email` 参数的代码，并添加了条件判断，如果用户成功被删除并且提供了邮箱地址，就调用 `send_mail` 函数来发送邮件通知。
+
+ 
+
+确保替换邮件配置中的占位符（如 'your_mail_server', 'your_email@example.com', 和 'your_password'）为实际工作中使用的邮件服务器设置。
+
+ 
+
+这就是如何让你的后端接口接收一个额外的邮箱信息，并在删除用户时向该邮箱发送通知的方法。如果删除成功，`send_mail` 函数会发送一封邮件给用户告知他们账号被删除的原因。请注意，邮件发送的逻辑可能会根据实际的邮箱服务器设置有所变化。
+
+
+
+
+
+
+
+
+
+>在我的支持向量机模型训练中，这段参数表示什么意思了？
+>
+> ``` # 设置参数 param_grid = { 'C': [0.1, 1, 10], 'gamma': ['scale', 'auto'], 'kernel': ['linear', 'rbf', 'poly'] } ```
+>
+> 我当前的`最佳结果: 0.821`,那么应该如何调整参数来调优 ?
+
+在支持向量机模型中，`param_grid` 是用来定义网格搜索中会尝试的参数的值。这个字典中的每个键代表一个参数，而与键相关联的列表则是在模型训练过程中要尝试的各种不同的值。这里的参数意义如下：
+
+ 
+
+- `C`：正则化参数。较小的`C`值会通过选择更大的间隔边界来增加错误分类的“容忍”，即允许更多的错误。较大的`C`值则会选择一个较小的间隔边界，通过惩罚分类错误来减少错误。
+- `gamma`：核函数的参数。对于非线性核，`gamma`决定了单个训练样本影响的范围，较低的值表示‘far’，较高的值表示‘close’。`gamma`的`scale`和`auto`是两种不同的方式来设置这个参数。
+- `kernel`：核函数类型。核函数可以是线性的，也可以是将输入空间映射到一个更高维度空间的函数。常见的核函数类型有`linear`, `rbf`和`poly`。
+
+ 
+
+你当前的`最佳结果: 0.821`可能是指你在使用这个参数网格进行模型训练后得到的最高准确率。
+
+ 
+
+为了进一步调优你的模型，你可以尝试以下方法：
+
+ 
+
+1. 更细化的参数格网: 如果你的计算资源允许，可以在并行运算的帮助下扩大参数范围或增加更多的参数值，例如，在`C`中添加[0.001, 0.01, 0.5, 5, 50]。
+2. 更改或添加参数: 如果你对SVM和你的数据集有足够的了解，可以思考是否需要在`param_grid`中添加新的参数，像是`degree`（针对`poly`核），或者移除不太重要的参数。
+3. 交叉验证: 通过更多的交叉验证折数，你可以减少随机性的影响，并可能得到一个更精确的模型评估。但这会增加计算成本。
+4. 使用随机搜索: 如果网格搜索的计算量太大，你可以尝试使用随机搜索，它在参数空间中随机选取组合，这通常更快，并且可以通过搜索更大的空间来提供相近或更好的结果。
+5. 模型评估标准: 确保你使用正确的模型评估标准。例如，在不平衡的数据集中，精确度可能不是最佳的评价指标，而应该考虑f1分数或ROC曲线下面积等。
+
+ 
+
+记住，在进行参数调整时，加大的仅是参数搜索的范围，这不一定会带来更好的结果，因为过度拟合问题可能会出现。确保有一个良好的交叉验证策略是至关重要的。 
+
+
+
+
+
+
+
+>那么，我可以先分散的训练出15个不同的机器学习模型作为基学习器（比如支持向量机、随机森林，逻辑回归、梯度提升树），将这些模型存储到本地，再统一到一个方法中读取这些已经训练出来的模型，使用Voting或者Stacking进行集成吗？ 
+
+当然可以。这是一个典型的集成学习工作流程，特别是在你想结合多个弱学习器的预测来构建一个更强大的集成模型的情况下。下面是详细的步骤说明：
+
+**步骤 1: 训练和保存基学习器**
+
+你可以独立地训练不同类型的机器学习模型，并使用各种库（比如scikit-learn的`joblib`）来将它们保存到磁盘上。例如：
+
+ 
+
+
+
+```python
+from joblib import dump, load
+
+# 训练模型
+svm_model = train_svm_procedure(...)   # 这是伪代码，替换为您的训练代码
+rf_model = train_rf_procedure(...)
+lr_model = train_lr_procedure(...)
+gbt_model = train_gbt_procedure(...)
+
+# 保存模型
+dump(svm_model, 'svm_model.joblib')
+dump(rf_model, 'rf_model.joblib')
+dump(lr_model, 'lr_model.joblib')
+dump(gbt_model, 'gbt_model.joblib')
+```
+
+ 
+
+ **步骤 2: 加载模型并进行集成**
+
+ 
+
+当所有模型都训练并保存好之后，你可以编写一个新的方法来加载这些存储的模型文件，使用Voting或Stacking集成框架来结合它们的预测。以下是使用`scikit-learn`来实现的伪代码示例：
+
+ 
+
+
+
+```python
+from sklearn.ensemble import VotingClassifier, StackingClassifier
+from joblib import load
+
+# 加载模型
+svm_model = load('svm_model.joblib')
+rf_model = load('rf_model.joblib')
+lr_model = load('lr_model.joblib')
+gbt_model = load('gbt_model.joblib')
+
+# 列出所有模型
+models = [
+    ('svm', svm_model),
+    ('random_forest', rf_model),
+    ('logistic_regression', lr_model),
+    ('gradient_boosting', gbt_model),
+    # ...其它模型
+]
+
+# Voting集成
+voting_ensemble = VotingClassifier(estimators=models, voting='soft')
+voting_ensemble.fit(X_train, y_train)
+
+# 或者Stacking集成
+stacking_ensemble = StackingClassifier(estimators=models, final_estimator=SomeMetaModel())
+stacking_ensemble.fit(X_train, y_train)
+```
+
+ 
+
+在上面的代码中，`VotingClassifier`和`StackingClassifier`是`scikit-learn`中的集成模型，分别用于创建投票和叠加集成。记得替换`X_train`和`y_train`为你的训练数据和标签。
+
+注意在集成之前，确保一点：所有模型都应该被训练和评估过，以确保它们各自有一个合理的性能水平，因为集成学习的目的是结合独立的模型来改善性能。一个非常弱的模型可能会降低整个集成的效果。此外，要灵活选择`final_estimator`（对于Stacking），这个模型将根据基学习器的预测来做最终决策。
+
+完成这些步骤后，你将能够部署一个更准确、鲁棒性更好的集成学习模型，相比于单独的基学习器，它通常能提供更好的预测性能。
+
+
+
+
+
+> 我的随机森林中选取训练集的特征是从Voltage1到Voltage16，那么，我在支持向量机中可以选取其中的任意部分特征来训练吗？这种训练出来的模型，后续可以使用Voting或者Stacking来集成吗？ 
+
+在进行Voting或Stacking集成时，模型的多样性是一个关键因素。不同的特征集、模型参数或不同类型的模型可以增加集成的多样性，这通常能带来更好的性能。不过，要精细控制模型的复杂度和性能之间的平衡，以及组合模型的方式，以达到最优的预测效果。
+
+最后，不要忘了评估组合后的模型性能，以验证集成学习方法是否真的比任何单个模型都要好。试验不同的集成策略、基模型的配置和元模型的选择，可以帮助找到最适合您特定数据集和任务的模型集成方案。
+
+
+
+
+
+>那么，假如我此时训练出20个包含支持向量机、随机森林和逻辑回归的较高精准度的基学习器（SVMs1、SVMs2、...、RandomF1、RandomF2），我想要使用bagging的策略或者Voting的策略来集成，我应该如何编码了？ 
+
+要使用Bagging或Voting策略对您提到的20个基学习器进行集成，您可以使用`scikit-learn`库中的`VotingClassifier`和`BaggingClassifier`。以下是您可能会使用的编码示例。
+
+**1、准备基学习器列表**
+
+首先，准备一个包含所有基学习器以及它们别名的列表。这假设已经有了预训练好的基学习器实例。
+
+```python
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+
+# 假设您已经有了预训练好的模型实例
+models = [
+    ('SVM1', trained_SVMs1),
+    ('SVM2', trained_SVMs2),
+    # ...
+    ('RandomF1', trained_RandomF1),
+    ('RandomF2', trained_RandomF2),
+    # ...
+    ('LogReg1', trained_LogReg1),
+    # ...
+]
+```
+
+ 
+
+**2、Voting集成策略**
+
+对于Voting，您可以选择硬投票或软投票。硬投票是指每一个模型对于每一个样本投票选择一个类别，而软投票则是指每一个模型对于每个类别输出一个概率，然后进行加权求和，选概率最高的类别。
+
+```python
+# 实例化VotingClassifier
+# 使用'hard'投票
+voting_clf_hard = VotingClassifier(estimators=models, voting='hard')
+
+# 使用'soft'投票，假设所有基学习器都有predict_proba方法
+voting_clf_soft = VotingClassifier(estimators=models, voting='soft')
+
+# 对模型进行训练
+voting_clf_hard.fit(X_train, y_train)
+voting_clf_soft.fit(X_train, y_train)
+
+# 对模型进行评估
+print(voting_clf_hard.score(X_test, y_test))
+print(voting_clf_soft.score(X_test, y_test))
+```
+
+ 
+
+ **3、Bagging集成策略**
+
+Bagging则通常是对单一模型进行多次训练，每次训练使用不同的数据子集。但如果您想对不同的模型实例使用Bagging，您需要分别对每种模型类型进行Bagging集成。下面以Random Forest模型为例实现Bagging。
+
+```python
+from sklearn.ensemble import BaggingClassifier
+
+# 以Random Forest为例来创建Bagging策略
+bagging_clf = BaggingClassifier(
+    base_estimator=RandomForestClassifier(),
+    n_estimators=20,
+    max_samples=0.8,
+    max_features=0.8
+)
+
+# 训练模型
+bagging_clf.fit(X_train, y_train)
+
+# 评估模型
+print(bagging_clf.score(X_test, y_test))
+```
+
+注意，对于BaggingClassifier的`base_estimator`参数，您可以选择将其设置为你的随机森林或其他模型。`n_estimators`参数表示集成中基模型的数量。
+
+确保在执行以上步骤之前，您已经完成了必要的数据预处理步骤，比如分割训练测试数据等 (`X_train`, `y_train`, `X_test`, `y_test`)，并正确导入所需的类和函数。
+
+值得注意的是，Bagging通常是对同一个算法的不同实例进行集成，而Voting可以是不同算法的实例。如果您想同时对不同的算法实例进行集成，通常会使用Stacking或者Voting中的软投票（如果算法可以提供预测概率的话）。
+
+
+
+>那么使用JWT 库生成我自己的token的如何写？ 
+
+要使用JWT（JSON Web Tokens）库在Python中生成token，通常会用到`PyJWT`这个库，它是处理JWT的一种流行方式。以下是一个简单的例子，展示了如何使用`PyJWT`生成和验证JWT token。
+
+首先，你需要安装`PyJWT`库。可以使用pip进行安装：
+
+```
+con
+```
+
+然后，你可以编写一个函数来生成JWT token。下面的代码示例中，我们创建了一个`generate_token`函数，它接受用户信息作为参数，并返回一个生成的token。
+
+```
+import jwt
+import datetime
+
+def generate_token(user_info):
+    try:
+        # 设置token的过期时间，这里设置为24小时后过期
+        exp = datetime.datetime.utcnow() + datetime.timedelta(days=1)
+        # 你的JWT密钥，用于签名token，应保持安全
+        secret_key = "YOUR_SECRET_KEY"
+        
+        # 创建一个字典，包含你想要放入token的信息
+        payload = {
+            'exp': exp,
+            'iat': datetime.datetime.utcnow(),  # token的发行时间
+            'sub': user_info  # 用户信息，比如用户ID或用户名
+        }
+        
+        # 使用HS256算法生成token
+        token = jwt.encode(payload, secret_key, algorithm='HS256')
+        
+        return token
+    except Exception as e:
+        return str(e)
+
+# 假设有个用户的信息是 'user_id_123'，生成token
+token = generate_token(user_info='user_id_123')
+
+print("Generated token:", token)
+```
+
+注意：这里的`YOUR_SECRET_KEY`应该被替换成你自己的密钥，这个密钥在JWT的签名过程中使用，并且在验证token时也必须知道。
+
+此外，`generate_token`函数中的`user_info`应该是一个唯一确定用户身份的信息，比如用户ID或用户名等。你可以根据自己的需要添加更多的信息到token的payload中。
+
+记住，token中的信息都是可以被解码查看的，所以不要在token中放入敏感信息，除非它们是加密的。
+
+使用上述方法，你就可以在你的应用中生成JWT token了。在用户登录成功后，调用这个函数并返回生成的token给用户。然后用户在后续的请求中携带这个token，服务器可以验证这个token来确认用户的身份。
+
+
+
+
+
+>TypeError: 'AdminInfoTable' object is not subscriptable
+
+问题出现在尝试从 `result` 对象中读取 'token' 字段时。报错信息显示 `'AdminInfoTable' object is not subscriptable` 意味着 `result` 是一个 `AdminInfoTable` 类型的对象，而不是字典（dict），因此不能像字典一样用 `result['token']` 这样的语法去获取数据。
+
+关于是否需要在数据表中加一个 `token` 字段，这实际上取决于你的业务逻辑。通常，登录逻辑包括验证用户的用户名和密码，验证成功后生成一个用于认证的 token（比如使用 JWT），然后将这个 token 发送给前端，前端随后用这个 token 来进行后续的请求验证。
+
+你不必在 `admininfo_table` 数据表中直接存储 token。Token 通常是在用户登录时按需生成的，然后在一定时间后过期。可以在服务端维护一个映射，关联用户和生成的 token，或者使用 JWT 这样的机制，它允许你在 token 自身中安全地存储用户信息。
+
+ 
+
+因此，你可能需要在 `result` 返回的对象中加入 token 的处理，但这个处理并不是直接将 token 存储到数据库中，而是生成 token 并在登录成功时返回给前端。例如：
+
+ 
+
+```
+from flask import jsonify
+from your_jwt_module import generate_token  # 假设这是你用来生成 token 的函数
+
+# 假设 result 是成功认证用户后的对象
+if result is not None:
+    # 生成 token
+    token = generate_token(result)  # 传入用户信息或唯一标识，生成 token
+    return jsonify({
+        'success': True,
+        'message': '登录成功',
+        'data': {
+            'token': token,  # 返回生成的 token
+        }
+    }), 200
+else:
+    return jsonify({
+        'success': False,
+        'message': '用户名或密码错误'
+    }), 401
+```
+
+请注意，`generate_token` 函数需要你自己根据实际情况来实现，可能会使用到 JWT 库等。这里只是提供了一个概念性的示例。
+
+
+
+>当前这段vue代码中，使用了scss进行编写样式，为什么有些需要加`.`运算符，有些不加？ 
+
+```vue
+<template>
+  <div class="login-container_me">
+<!--    建立两个表单-->
+    <div class="form">
+      <div class="title">欢迎 <b>回来</b></div>
+      <div class="subtitle">登录你的账户</div>
+      <div class="inputf">
+        <input type="text" placeholder="用户名"/>
+        <span class="label">用户名</span>
+      </div>
+      <div class="inputf">
+        <input type="text" placeholder="密码"/>
+        <span class="label">密码</span>
+      </div>
+      <button>登录</button>
+    </div>
+
+    <div class="form"></div>
+  </div>
+</template>
+<style lang="scss">
+.login-container_me {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: url("../assets/img/background_picture.jpg") no-repeat center center;
+  background-size: cover;
+  .form{
+    width: 300px;
+    height: 400px;
+    background: rgba(17,25,40,0.75);
+    backdrop-filter: blur(16px) saturate(0);
+    border-radius: 10px;
+    padding: 40px 60px;
+    box-shadow: rgba(50,50,93,0.25) 50px 50px 100px -20px,
+                rgba(0,0,93,0.5) 30px 30px 60px -30px,
+                rgba(212,217,222,0.35) 2px -2px 6px 0px inset;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: flex-start;
+
+    //标题样式
+    .title{
+      font-size: 18px;
+      color: rgb(246,240,255);
+      letter-spacing: 1px;
+      font-weight: 300;
+
+    }
+    //副标题样式
+    .subtitle{
+      font-size: 11px;
+      color: rgb(246,240,255);
+      letter-spacing: 1px;
+      margin-bottom: 35px;
+    }
+    //输入框这个整体结构的样式
+    .inputf{
+      width: 100%;
+      position: relative;
+      margin-bottom: 35px;
+      input{
+        width: 100%;
+        height: 35px;
+        border: none;
+        outline: 1.5px solid rgb(200,200,220);
+        background: transparent;
+        border-radius: 8px;
+        font-size: 12px;
+        padding: 0 15px;
+        color: rgb(246,249,255);
+        &::placeholder{
+          color: rgb(175,180,190);
+        }
+        //写鼠标聚焦效果
+        &:focus{
+          outline: 1.5px solid rgb(224,229,240);
+          &::placeholder{
+            opacity: 0;
+          }
+          & + .label{
+            opacity: 1;
+            top: -20px;
+          }
+        }
+        //让上面的鼠标聚焦后，在输入文本到输入框之后，那个聚焦仍然在。
+        &:not(:placeholder-shown)+.label{
+          opacity: 1;
+          top: -20px;
+        }
+      }
+      .label{
+        position: absolute;
+        top: 0;
+        left: 0;
+        color: rgb(246,249,255);
+        font-size: 11px;
+        font-width: bold;
+        transition: 0.25s ease-out;
+        opacity: 0;
+      }
+    }
+    button{
+      width: 100%;
+      height: 35px;
+      background: rgb(36,217,127);
+      color: #ffffff;
+      border: none;
+      outline: none;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 12px;
+      cursor: pointer;
+    }
+  }
+}
+</style>
+```
+
+在提供的 Vue 组件中，使用了 SCSS 作为样式语言，这里涉及到了 SCSS 的嵌套语法。
+
+在 SCSS 中，`.` 运算符用于表示类选择器。当你在 SCSS 中看到 `.className`，这意味着它选择所有具有 `className` 类的 HTML 元素。在你的代码中，`.login-container_me`、`.form`、`.title`、`.subtitle`、`.inputf` 和 `.label` 都是类选择器，用于应用特定样式到具有这些类的 HTML 元素。即，是类就加，不是类就不加。
+
+
+
+
+
+
+
+>传递给守卫的参数· to、from 和 next各自代码什么意思？ 
+
+在 Vue Router 的导航守卫中，`to`、`from` 和 `next` 是三个参数，它们具有特定的含义和作用：
+
+- `to`: 这个参数代表==即将要进入的目标路由对象==。它包含了即将导航到的路由的信息，像是路径(`path`)、名称(`name`)、完整路径(`fullPath`)、hash、查询参数(`query`)和路由参数(`params`)等。此外，它还包含了之前提到的自定义 `meta` 字段。
+- `from`: 这个参数代表==当前导航正要离开的路由对象==。其结构与 `to` 参数类似，包含了当前路由的相同集合的属性。使用 `from` 参数可以访问当前路由的信息，并根据这些信息执行诸如权限验证等逻辑。
+- `next`: ==这是一个函数==，必须在全局前置守卫中调用它来解析这个钩子。执行 `next` 函数将会决定守卫钩子的行为。当调用：
+  - `next()`：无参数时，表示放行，允许导航继续。
+  - `next(false)`：中断当前的导航。如果浏览器的 URL 改变了（可能是用户手动或浏览器后退按钮），URL 地址会重置到 `from` 路由对应的地址。
+  - `next('/path')` 或 `next({ path: '/path' })`：跳转到一个不同的地址。当前的导航被中断，然后进行一个新的导航。
+  - `next(error)`：如果传入任何参数且参数不是上述形式，导航会被终止并且该参数会传递给路由器的 `onError` 钩子。
+
+这三个参数的配合使用可以让你对路由的访问进行全面控制，实现复杂的权限和重定向逻辑。
+
+
+
+>如何在路由守卫中检查路由的 `meta` 字段？ 
+
+在路由守卫中检查路由的 `meta` 字段非常简单。每次导航发生之前，全局前置守卫 `router.beforeEach` 会被调用，传递给守卫的参数 `to`、`from` 和 `next` 允许你对导航过程进行控制。
+
+检查 `meta` 字段的步骤如下：
+
+1. 在 `router.beforeEach` 的回调函数中，访问 `to` 对象（即将要进入的目标路由对象）。
+2. 然后调用 `to.meta` 来获取目标路由的 `meta` 字段。
+3. 通过 `to.meta` 下的属性（在你的例子中是 `requireAuth`）来决定是否需要进行某些操作，如重定向到登录页面、允许导航或取消导航。
+
+
+
+实例：
+
+```js
+router.beforeEach((to, from, next) => {
+  // 检查即将进入的路由配置中的meta字段的requireAuth属性
+  if (to.meta.requireAuth) {
+    // 根据情况做进一步处理
+    // 比如：检查登录状态等
+    if (用户已经登录) {
+      next(); // 允许继续导航
+    } else {
+      next('/login'); // 重定向到登录页
+    }
+  } else {
+    next(); // 如果不需要登录权限，直接允许导航
+  }
+});
+```
+
+
+
+
+
+>为什么要使用 `to.meta.requireAuth` 来判断路由是否需要登录权限？ 
+
+使用 `to.meta.requireAuth` 来判断路由是否需要登录权限是因为在Vue Router中，每个路由记录可以带有一个 `meta` 字段，你可以在这个字段中设置自定义的路由元信息。`meta` 字段是一个可以存储任意值的对象，在路由记录中使用 `meta` 字段来定义额外的信息是一种常见的做法。
+
+设置 `requireAuth` 属性是 Vue Router 的一种约定用法，用以说明访问该路由是否需要用户已登录。通过在路由元信息中标记 `requireAuth` 参数，可以让你的路由配置变得清晰和易于管理：
+
+- 当 `requireAuth` 设置为true时，表示该路由需要登录才能访问。
+- 当 `requireAuth` 设置为false或者没有设置时，表示该路由不需要登录就可以访问。
+
+这种方式使得你可以轻松地判断某个路由是否受保护，而不需要在每次路由跳转的时候写复杂的逻辑。路由守卫（如 `beforeEach`）可以检查每个即将进入的路由的 `meta` 字段，来决定是否需要进行权限控制。
+
+
+
+
+
+>当前在表头的这段代码的意思`:data="tableData.filter(data => !search || data.name.toLowerCase().includes(search.toLowerCase()))" `是什么？
+
+将这一切放在一起，这段代码的含义是：如果 `search` 为空，就返回所有 `tableData`；如果 `search` 非空，那么仅返回 `name` 属性在忽略大小写的情况下包含 `search` 文本的数组元素。这常用于实现搜索框进行实时搜索过滤表格数据的功能。 
+
+- `:data` 是一个 Vue 的动态属性绑定，它等价于 `v-bind:data`，用于绑定表格组件的 `data` 属性。
+- `tableData` 应该是一个包含所有表格行数据的数组。
+- `.filter(...)` 是 JavaScript 数组的一个方法，用于根据提供的测试函数创建一个新数组，该函数返回那些测试返回真值的元素。
+- `data => ...` 是一个箭头函数，它接受数组中的每一个元素（这里表示为 `data`）并对其执行测试。
+- `!search` 检查 `search` 变量是否不存在（空字符串、`null`、`undefined` 等），如果 `search` 为空，则表达式返回 `true`，意味着不进行过滤，所有 `tableData` 会被返回。
+- `data.name.toLowerCase().includes(search.toLowerCase())` 是一个测试条件，它会把 `data` 元素的 `name` 属性转为小写字母，然后检查它是否包含（`includes`）转为小写的 `search` 字符串。如果包含，返回 `true`。
+- `||` 是逻辑 OR 运算符，如果左边的表达式结果为 `true`，那么整个表达式结果为 `true`，否则计算右边的表达式。
+
+注意：
+
+在你的代码中，错误信息 "TypeError: data.name_val is undefined" 指出了问题所在：当你尝试访问数组中每个元素的 `name_val` 属性时，发生了错误。这个问题可能是因为在你的 `tableData` 数组中，至少有一个对象不包含 `name_val` 属性，或者该属性的值是 `undefined`。 
+
+也就是，写在过滤中的`data`是绑定在此的对象`tableData`中的对象。==> 完成
+
+
+
+
+
+>前台展示的时间信息中，将数据库中的存储格式转变为了方便JSON传递的格式：`  "Fri, 19 Apr 2024 12:28:54 GMT"`。请问我应该如何恢复数据库中的存储格式`2024-04-19 12:28:54`并展示在前台?
+
+要将日期时间从 `Fri, 19 Apr 2024 12:28:54 GMT` 格式转换为 `2024-04-19 12:28:54` 格式并在前端展示，你可以使用JavaScript的 `Date` 对象和 `Intl.DateTimeFormat` API来实现这一格式转换。
+
+以下是一个示例代码段，显示了如何在Vue.js组件中完成这个转换：
+
+```vue
+<el-table-column label="创建时间" prop="CreateTime">
+  <template slot-scope="scope">
+    <span>{{ formatDate(scope.row.CreateTime) }}</span>
+  </template>
+</el-table-column>
+```
+
+ 
+
+接下来在Vue组件的`methods`中添加`formatDate`方法：
+
+```js
+methods: {
+  formatDate(dateString) {
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    // 根据需要调整locale，这里使用'zh-CN'表示中国大陆地区
+    const formattedDate = new Intl.DateTimeFormat('zh-CN', options).format(date).replace(/\//g, '-');
+    // Replace the commas added by Intl in some locales such as 'en-US'
+    return formattedDate.replace(',', '');
+  }
+}
+```
+
+ 
+
+这个`formatDate`方法首先使用`Date`对象将传入的日期字符串转换为日期对象，然后使用`Intl.DateTimeFormat`与一个选项对象来定义输出的格式。在这个例子中，我们指定了数字年份(`numeric`), 两位数字月份和日期(`2-digit`)，以及24小时制的小时、分钟和秒。`hour12: false`确保使用的是24小时制而非12小时制。
+
+注意，`replace(/\//g, '-')`用于将日期分隔符从斜杠(`/`)替换为短横线(`-`)，以符合目标格式 `YYYY-MM-DD HH:mm:ss`。
+
+这个方法会返回一个按照 `2024-04-19 12:28:54` 格式转换后的字符串，可以直接在前端页面中显示。
+
+请根据你的具体需求调整locale和格式化选项。例如，如果你的用户主要在其他地区，你可能需要根据那里的习惯调整日期和时间的格式化方式。
+
+
+
+
+
+>我前台的代码中，对数据表中是否启用字段的展示如下： ``` <el-table-column label="是否启用" prop="IsUse"> </el-table-column> ``` 但是按照后端反馈的代码中。IsUse=true或者false。我应该如何编写，才能够在表格中展示 ?
+
+在Vue.js 中，你可以使用自定义模板来定制 `el-table-column` 渲染单元格的方式。可以通过 `<template>` 与作用域插槽 `scope` 来实现这个目的。
+
+在 `scope` 对象中有一个属性 `row`，它包含了当前行的数据。你可以使用这个属性来判断 `IsUse` 字段的值，并相应地显示 "启用" 或 "未启用"。
+
+下面是实现这一功能的代码示例:
+
+```vue
+<el-table-column label="是否启用" prop="IsUse">
+  <template slot-scope="scope">
+    <span v-if="scope.row.IsUse">启用</span>
+    <span v-else>未启用</span>
+  </template>
+</el-table-column>
+```
+
+
+
+在这个例子中，我们使用了 `v-if` 和 `v-else` 指令来基于 `IsUse` 字段的值条件渲染不同的文本。当 `IsUse` 为 true 时显示 "启用"，否则显示 "未启用"。
+
+请确保在实际代码中`prop="IsUse"`所指向的属性与你后端发送的JSON对象中的对应属性名完全一致，大小写敏感。如果属性名正确，则上述代码应该按预期工作。
+
+
+
+
+
+
+
+>我一个flask项目中只能有一个SQLAlchemy实例吗？ 
+
+是的，在一个Flask应用程序中，通常情况下，你只应该创建并使用一个`SQLAlchemy`实例。这是因为`SQLAlchemy`实例负责管理数据库的连接和会话，多个实例可能会导致不可预测的行为，例如连接泄露、事务管理问题或者难以维护。 
+
+
+
+
+
+>MYSQL数据库中可以存储庞大的机器学习训练后的模型吗，其是.pkl文件，有些模型文件可能高达数百MB ?
+
+因此，针对这种情况，一种较好的做法是只在数据库中存储这些大型文件的路径，而实际的文件被保存在文件系统中。这样可以利用数据库快速查询文件路径的优点，同时避免了上述提到的一些问题。 
+
+
+
+
 
 > 1、首先需要思考的问题是：我的考虑需要不需要提升到vue3？
 
@@ -1963,10 +3734,6 @@ npm应该是node下的一个管理工具，之后后面被普及化了。
 **`npm`**是node package management是nodejs中第三方插件的管理工具 
 
 **`npx`**是npm5.6之后自带的一个命令,npm会把依赖下载到本地,形成一个node_modules文件,执行npx命令时,会先到项目文件夹中去找,没有的话再下载到内存里,执行完命令后就会马上删除掉依赖,不会侵入源代码 
-
-
-
-
 
 
 
@@ -2009,5 +3776,24 @@ https://echarts.apache.org/examples/zh/editor.html?c=line-race
 Vue项目中添加 页面 标签页 的 小图标_vue 标签的小图标-CSDN博客 —— 有三个位置要改。
 https://blog.csdn.net/qq_41709082/article/details/98855528
 
+Pycharm：鼠标滚动控制字体大小 - PamShao - 博客园
+https://www.cnblogs.com/pam-sh/p/13173747.html
 
+conda 查看python包版本-掘金
+https://juejin.cn/s/conda%20%E6%9F%A5%E7%9C%8Bpython%E5%8C%85%E7%89%88%E6%9C%AC
+
+安装scikit-learn-scikit-learn中文社区
+https://scikit-learn.org.cn/lists/1.html
+
+在vue2中，使用vue-awesome-swiper的坑 - 掘金
+https://juejin.cn/post/7348247657284173874
+
+vue2.0和vue3.0的Vue-Lazyload的使用_vue-lazyload版本-CSDN博客
+https://blog.csdn.net/kkfake/article/details/128415360
+
+图片懒加载v-lazy的使用 - 掘金
+https://juejin.cn/post/7185065866592010301
+
+强烈推荐7个国外图片资源网站 - 知乎
+https://zhuanlan.zhihu.com/p/108643049
 

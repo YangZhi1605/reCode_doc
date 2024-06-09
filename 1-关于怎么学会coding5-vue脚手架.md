@@ -317,6 +317,8 @@ npm install
 
 ##### 1.4.2.1、回顾组件和路由
 
+![1713443811047](E:\文档_Typora\1-关于怎么学会coding5-vue脚手架.assets\1713443811047.png)
+
 
 
 注意理解我上面说的话，Vue中，一切皆是组件对象。
@@ -435,7 +437,7 @@ const login = {
 
 `./`是当前文件夹。`../`是上层中的同级文件夹
 
-**至于App.vue相当于一个主组件，组组件中写好<router-view/>也就负责展示好哪些挂载在Router()上的信息了**
+**至于App.vue相当于一个主组件，组组件中写好`<router-view/>`也就负责展示好哪些挂载在Router()上的信息了**
 
 组件是在哪里写的？`<script></script>`标签中。
 
@@ -493,6 +495,98 @@ const login = {
 
 
 然后在`Home`组件中复用
+
+
+
+##### 1.4.2.3、浅谈路由管理
+
+**我们前面已经知道了组件和路由组件。也就是在使用路由组件之后，对应路由（url路径）中的组件就会被展示。**
+
+那么，这个展示可算是有文章了。可以说，**一层路由对应一个展示出口`<router-view />`**
+
+且看图：
+
+![1713444110495](E:\文档_Typora\1-关于怎么学会coding5-vue脚手架.assets\1713444110495.png)
+
+那么，管理这层路由的`<router-view/>`展示一般写在App.vue中。即一般喊的顶层
+
+![1713444177970](E:\文档_Typora\1-关于怎么学会coding5-vue脚手架.assets\1713444177970.png)
+
+然后呢？我们是有嵌套路由的，这也就到我喊的第二层。
+
+这个第二层奥，就是你在哪个组件中进行了第二层的开发工作，例如：
+
+![1713444277922](E:\文档_Typora\1-关于怎么学会coding5-vue脚手架.assets\1713444277922.png)
+
+那么，就到这个被嵌套的顶层中，去写路由展示`<router-view/>`
+
+![1713444325381](E:\文档_Typora\1-关于怎么学会coding5-vue脚手架.assets\1713444325381.png)
+
+那么，例如`/order/list`就会在`order`组件中的`<router-view/>`位置展示出来。
+
+看页面：
+
+![1713444436583](E:\文档_Typora\1-关于怎么学会coding5-vue脚手架.assets\1713444436583.png)
+
+
+
+这是我在输入框输入的路径，假如平时，那么我们是点击之后，展示到被嵌套的组件中。
+
+此时你可以写一些事件，然后通过`$route`来处理
+
+例如这个通过`$route`来实现参数获取
+
+![1713444609718](E:\文档_Typora\1-关于怎么学会coding5-vue脚手架.assets\1713444609718.png)
+
+具体怎么跳转：
+
+![1713444874098](E:\文档_Typora\1-关于怎么学会coding5-vue脚手架.assets\1713444874098.png)
+
+```vue
+<template>
+    <div>
+      这是我常规写的内容
+      <el-button type="success" @click="toRouter">点击我</el-button>
+      <router-view></router-view>
+    </div>
+</template>
+
+<script>
+
+export default {
+  name: 'Index',
+  components: {},
+  props: {},
+  data() {
+    return {}
+  },
+  methods: {
+    toRouter() {
+      this.$router.push('/index/indexChild1')
+    },
+  },
+  created() {
+  },
+
+}
+</script>
+<style lang="scss" scoped>
+
+</style>
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

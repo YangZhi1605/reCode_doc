@@ -27,7 +27,7 @@
 **用过 `Vue.component` 来创建组件** 
 
 其主要流程：
-① 在<script></script>中开发组件
+① 在`<script></script>`中开发组件
 
 >Vue.component用来开发组件的时候，有参数：
 >
